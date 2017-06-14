@@ -3,6 +3,8 @@ package com.curve.nandhakishore.deltatwo;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -23,6 +25,9 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.jar.Manifest;
 
@@ -89,6 +94,7 @@ public class HomePage extends AppCompatActivity {
                                     public void onDismissed(Snackbar transientBottomBar, int event) {
                                         if (undo != 1) {
                                             dbData.removeRow(temp);
+                                            Log.e("db", "Removed " + temp.caption);
                                         }
                                         undo = 0;
                                         super.onDismissed(transientBottomBar, event);
@@ -128,7 +134,7 @@ public class HomePage extends AppCompatActivity {
                             System.out.println("***Problem creating Image folder ");
                         }
                     }
-                    File tempImg = new File(imagePath, "temp_image.jpg");
+                    File tempImg = new File(imagePath, "temp_image.png");
                     Uri photoUri = getUriForFile(getApplicationContext(), "com.curve.nandhakishore.provider", tempImg);
                     getApplicationContext().grantUriPermission("com.curve.nandhakishore.deltatwo", photoUri, Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
@@ -149,11 +155,36 @@ public class HomePage extends AppCompatActivity {
         } else if (requestCode == 2 && resultCode == RESULT_OK) {
             Uri imageUri;
             File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoCamera");
-            File fi = new File(imagePath, "temp_image.jpg");
+            File tempImg = new File(imagePath, "temp_image.png");
+            File sample = new File(imagePath, "temp_sample.jpg");
+            Log.e("Bitmap", "Start compress");
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(tempImg.getAbsolutePath(), options);
+            options.inSampleSize = listTools.calculateInSampleSize(options, 720, 1280);
+            options.inJustDecodeBounds = false;
+            Bitmap bmp = BitmapFactory.decodeFile(tempImg.getAbsolutePath(), options);
+            Log.e("Bitmap", "Stop compress");
+            Log.e("Camera", "Start writing");
             try {
-                imageUri = Uri.parse(android.provider.MediaStore.Images.Media.insertImage(getContentResolver(), fi.getAbsolutePath(), null, null));
-                if (!fi.delete()) {
-                    Log.e("logMarker", "Failed to delete " + fi);
+                OutputStream fOutputStream = new FileOutputStream(sample);
+                bmp.compress(Bitmap.CompressFormat.JPEG, 100, fOutputStream);
+                fOutputStream.flush();
+                fOutputStream.close();
+            }catch (FileNotFoundException e){
+                e.printStackTrace();
+                return;
+            }catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+            Log.e("Camera", "Stop writing");
+            try {
+                Log.e("Media", "Start");
+                imageUri = Uri.parse(android.provider.MediaStore.Images.Media.insertImage(getContentResolver(), sample.getAbsolutePath(), null, null));
+                Log.e("Media", "Stop");
+                if (!tempImg.delete()) {
+                    Log.e("logMarker", "Failed to delete " + tempImg);
                 }
                 listTools.getFromCam(this, imageUri);
             } catch (FileNotFoundException e) {

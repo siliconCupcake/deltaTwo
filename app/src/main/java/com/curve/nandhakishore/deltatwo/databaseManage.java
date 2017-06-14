@@ -18,7 +18,7 @@ public class databaseManage {
     private static final String C_CAPTION = "CAPTION";
     private String[] allColumns = {C_ID, C_IMG, C_CAPTION};
 
-    private static final String CREATE_DB = "CREATE TABLE " + TABLE_NAME + "( " + C_ID + " INTEGER PRIMARY KEY, "
+    private static final String CREATE_DB = "CREATE TABLE " + TABLE_NAME + "( " + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + C_IMG + " TEXT, " + C_CAPTION + " TEXT);";
 
     private dbHelper myHelper;
@@ -59,7 +59,6 @@ public class databaseManage {
 
     public long createEntry (cardItem c) {
         ContentValues cv = new ContentValues();
-        cv.put(C_ID, c.place);
         cv.put(C_IMG, c.image.toString());
         cv.put(C_CAPTION, c.caption);
         return myDatabase.insert(TABLE_NAME, null, cv);

@@ -13,5 +13,6 @@ public class cardItem {
         caption = cap;
         place = p;
     }
+
 }
 
