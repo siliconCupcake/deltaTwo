@@ -152,20 +152,20 @@ public class HomePage extends AppCompatActivity {
             Uri imageUri = data.getData();
             listTools.getFromGal(this, imageUri);
             list_adapter.notifyDataSetChanged();
-        } else if (requestCode == 2 && resultCode == RESULT_OK) {
+        }
+        else if (requestCode == 2 && resultCode == RESULT_OK) {
             Uri imageUri;
             File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoCamera");
             File tempImg = new File(imagePath, "temp_image.png");
             File sample = new File(imagePath, "temp_sample.jpg");
-            Log.e("Bitmap", "Start compress");
+
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             BitmapFactory.decodeFile(tempImg.getAbsolutePath(), options);
             options.inSampleSize = listTools.calculateInSampleSize(options, 720, 1280);
             options.inJustDecodeBounds = false;
             Bitmap bmp = BitmapFactory.decodeFile(tempImg.getAbsolutePath(), options);
-            Log.e("Bitmap", "Stop compress");
-            Log.e("Camera", "Start writing");
+
             try {
                 OutputStream fOutputStream = new FileOutputStream(sample);
                 bmp.compress(Bitmap.CompressFormat.JPEG, 100, fOutputStream);
@@ -178,11 +178,8 @@ public class HomePage extends AppCompatActivity {
                 e.printStackTrace();
                 return;
             }
-            Log.e("Camera", "Stop writing");
             try {
-                Log.e("Media", "Start");
                 imageUri = Uri.parse(android.provider.MediaStore.Images.Media.insertImage(getContentResolver(), sample.getAbsolutePath(), null, null));
-                Log.e("Media", "Stop");
                 if (!tempImg.delete()) {
                     Log.e("logMarker", "Failed to delete " + tempImg);
                 }

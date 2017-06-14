@@ -4,6 +4,8 @@
     android:layout_width="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_marginTop="10dp"
+    android:layout_marginEnd="12dp"
+    android:layout_marginStart="12dp"
     app:cardCornerRadius="3dp">
 
     <RelativeLayout
@@ -11,20 +13,38 @@
         android:layout_height="match_parent"
         android:paddingBottom="0dp">
 
-        <ImageView
-            android:id="@+id/image"
-            android:layout_width="match_parent"
+        <RelativeLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:scaleType="fitXY"/>
+            android:id="@+id/rel">
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="visible"
+                android:layout_centerHorizontal="true"
+                android:layout_centerVertical="true"
+                android:layout_marginTop="50dp" />
+
+            <ImageView
+                android:id="@+id/image"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:scaleType="fitXY" />
+
+        </RelativeLayout>
 
         <ImageView
             android:layout_width="55dp"
             android:layout_height="55dp"
             android:id="@+id/circle"
-            android:layout_below="@+id/image"
+            android:layout_below="@+id/rel"
             android:scaleType="center"
-            android:src="@drawable/circle"/>
+            android:src="@drawable/circle" />
 
         <TextView
             android:layout_width="55dp"
@@ -33,7 +53,7 @@
             android:text="1"
             android:id="@+id/pos"
             android:gravity="center"
-            android:layout_below="@+id/image"/>
+            android:layout_below="@+id/rel" />
 
         <TextView
             android:id="@+id/caption"
@@ -43,10 +63,10 @@
             android:layout_marginStart="10dp"
             android:gravity="center_vertical"
             android:textSize="20sp"
-            android:layout_below="@+id/image"
+            android:layout_below="@+id/rel"
             android:layout_toEndOf="@id/circle"
             android:text="Custom Caption"
-            android:textColor="@color/list_text"/>
+            android:textColor="@color/list_text" />
 
     </RelativeLayout>
 

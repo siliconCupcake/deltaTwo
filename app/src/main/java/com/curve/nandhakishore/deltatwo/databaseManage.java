@@ -6,6 +6,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
+import android.util.Log;
+
 import java.util.ArrayList;
 
 public class databaseManage {
@@ -70,6 +72,7 @@ public class databaseManage {
         for(c.moveToFirst(); !c.isAfterLast(); c.moveToNext()) {
             cardItem row = convertData(c);
             list.add(row);
+            Log.e("Recieved place value", String.valueOf(row.place));
         }
         c.close();
         return list;
