@@ -1,8 +1,11 @@
 package com.curve.nandhakishore.deltatwo;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -21,15 +24,15 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.View;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.jar.Manifest;
+import java.util.Calendar;
 
 import android.Manifest.permission;
 
@@ -42,7 +45,8 @@ public class HomePage extends AppCompatActivity {
     RecyclerView.LayoutManager list_manager;
     imageAdapter list_adapter;
     databaseManage dbData = new databaseManage(this);
-    int undo = 0, permCount = 0;
+    int undo = 0, permCount = 0, fileno = 0;
+    String today = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +57,14 @@ public class HomePage extends AppCompatActivity {
         listTools.init_cards();
         listTools.allCards = dbData.getData();
         listTools.coordinatorLayout = (CoordinatorLayout) findViewById(R.id.cLayout);
+
+        SimpleDateFormat df = new SimpleDateFormat("ddMMyyyy");
+        String new_date = df.format(Calendar.getInstance().getTime());
+        SharedPreferences sPrefs = getSharedPreferences("MyPreferences", MODE_PRIVATE);
+        if (!sPrefs.getString("date", "default").equals(new_date))
+            fileno = 0;
+        else
+            fileno = sPrefs.getInt("count", 0);
 
         list_images = (RecyclerView) findViewById(R.id.list);
         list_manager = new LinearLayoutManager(this);
@@ -157,7 +169,13 @@ public class HomePage extends AppCompatActivity {
             Uri imageUri;
             File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoCamera");
             File tempImg = new File(imagePath, "temp_image.png");
-            File sample = new File(imagePath, "temp_sample.jpg");
+
+            SimpleDateFormat df = new SimpleDateFormat("ddMMyyyy");
+            today = df.format(Calendar.getInstance().getTime());
+            String filename = "IMG-" + today + "-DTC" + String.format("%04d", fileno) + ".jpg";
+            fileno++;
+
+            File sample = new File(imagePath, filename);
 
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
@@ -178,22 +196,28 @@ public class HomePage extends AppCompatActivity {
                 e.printStackTrace();
                 return;
             }
-            try {
-                imageUri = Uri.parse(android.provider.MediaStore.Images.Media.insertImage(getContentResolver(), sample.getAbsolutePath(), null, null));
-                if (!tempImg.delete()) {
-                    Log.e("logMarker", "Failed to delete " + tempImg);
-                }
-                listTools.getFromCam(this, imageUri);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-                Log.e("Error", "No file");
+            imageUri = getImageContentUri(this, sample);
+            Log.e("File", Uri.fromFile(sample).toString());
+            Log.e("Content", imageUri.toString());
+            if (!tempImg.delete()) {
+                Log.e("logMarker", "Failed to delete " + tempImg);
             }
+            listTools.getFromCam(this, imageUri);
             list_adapter.notifyDataSetChanged();
         }
 
         super.onActivityResult(requestCode, resultCode, data);
     }
 
+    @Override
+    protected void onStop() {
+        SharedPreferences sPrefs = getSharedPreferences("MyPreferences", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sPrefs.edit();
+        editor.putInt("count", fileno);
+        editor.putString("date", today);
+        editor.apply();
+        super.onStop();
+    }
 
     @Override
     protected void onDestroy() {
@@ -239,7 +263,29 @@ public class HomePage extends AppCompatActivity {
 
             default: super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
+    }
 
+    public static Uri getImageContentUri(Context context, File imageFile) {
+        String filePath = imageFile.getAbsolutePath();
+        Cursor cursor = context.getContentResolver().query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                new String[] { MediaStore.Images.Media._ID },
+                MediaStore.Images.Media.DATA + "=? ",
+                new String[] { filePath }, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            int id = cursor.getInt(cursor.getColumnIndex(MediaStore.MediaColumns._ID));
+            cursor.close();
+            return Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "" + id);
+        } else {
+            if (imageFile.exists()) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Images.Media.DATA, filePath);
+                return context.getContentResolver().insert(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            } else {
+                return null;
+            }
+        }
     }
 }
 
