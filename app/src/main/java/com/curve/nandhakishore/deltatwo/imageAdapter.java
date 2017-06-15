@@ -1,6 +1,8 @@
 package com.curve.nandhakishore.deltatwo;
 
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.hardware.display.VirtualDisplay;
@@ -15,6 +17,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.drawable.GlideDrawable;
@@ -25,10 +28,19 @@ import com.squareup.picasso.Picasso;
 
 public class imageAdapter extends RecyclerView.Adapter<imageAdapter.cardHolder> {
 
-    Context myContext;
+    static Context myContext;
 
     public imageAdapter(Context con) {
         myContext = con;
+    }
+
+    private HomePage.OnItemClickListener onItemClickListener;
+    public HomePage.OnItemClickListener getOnItemClickListener() {
+        return onItemClickListener;
+    }
+
+    public void setOnItemClickListener(HomePage.OnItemClickListener onItemClickListener) {
+        this.onItemClickListener = onItemClickListener;
     }
 
     @Override
@@ -39,15 +51,19 @@ public class imageAdapter extends RecyclerView.Adapter<imageAdapter.cardHolder> 
 
 
     @Override
-    public void onBindViewHolder(final cardHolder holder, int position) {
+    public void onBindViewHolder(final cardHolder holder, final int position) {
 
         holder.pBar.setVisibility(View.VISIBLE);
+        holder.cError.setVisibility(View.GONE);
         Glide
                 .with(myContext)
                 .load(listTools.allCards.get(position).image)
                 .listener(new RequestListener<Uri, GlideDrawable>() {
                     @Override
                     public boolean onException(Exception e, Uri uri, Target<GlideDrawable> target, boolean b) {
+                        holder.cError.setVisibility(View.VISIBLE);
+                        holder.pBar.setVisibility(View.GONE);
+                        Log.e("Loading", e.toString());
                         return false;
                     }
 
@@ -62,6 +78,14 @@ public class imageAdapter extends RecyclerView.Adapter<imageAdapter.cardHolder> 
 
         holder.cCaption.setText(listTools.allCards.get(position).caption);
         holder.cPos.setText(String.valueOf(holder.getAdapterPosition() + 1));
+
+        View.OnClickListener listener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onItemClickListener.onItemClick(listTools.allCards.get(position));
+            }
+        };
+        holder.cImage.setOnClickListener(listener);
     }
 
     @Override
@@ -69,12 +93,13 @@ public class imageAdapter extends RecyclerView.Adapter<imageAdapter.cardHolder> 
         return listTools.allCards.size();
     }
 
-    public static class cardHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    public static class cardHolder extends RecyclerView.ViewHolder {
 
         private ImageView cImage;
         private TextView cCaption;
         private TextView cPos;
         private ProgressBar pBar;
+        private TextView cError;
 
         public cardHolder(View v) {
             super(v);
@@ -82,33 +107,9 @@ public class imageAdapter extends RecyclerView.Adapter<imageAdapter.cardHolder> 
             this.cCaption = (TextView) v.findViewById(R.id.caption);
             this.cPos = (TextView) v.findViewById(R.id.pos);
             this.pBar = (ProgressBar) v.findViewById(R.id.progressBar);
-            v.setOnClickListener(this);
-        }
-
-        @Override
-        public void onClick(View view) {
-
+            this.cError = (TextView) v.findViewById(R.id.error);
         }
     }
 
-    private class ImageLoadedCallback implements Callback {
-        ProgressBar progressBar;
-
-        public  ImageLoadedCallback(ProgressBar progBar){
-            progressBar = progBar;
-        }
-
-        @Override
-        public void onSuccess() {
-            if (progressBar != null){
-                progressBar.setVisibility(View.GONE);
-            }
-        }
-
-        @Override
-        public void onError() {
-
-        }
-    }
 }
 

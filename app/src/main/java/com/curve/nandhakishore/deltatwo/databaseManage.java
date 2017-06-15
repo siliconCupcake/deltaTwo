@@ -72,7 +72,6 @@ public class databaseManage {
         for(c.moveToFirst(); !c.isAfterLast(); c.moveToNext()) {
             cardItem row = convertData(c);
             list.add(row);
-            Log.e("Recieved place value", String.valueOf(row.place));
         }
         c.close();
         return list;

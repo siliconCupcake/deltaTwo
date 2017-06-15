@@ -1,5 +1,6 @@
 package com.curve.nandhakishore.deltatwo;
 
+import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -13,7 +14,6 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -21,6 +21,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.View;
@@ -35,6 +36,12 @@ import java.util.ArrayList;
 import java.util.Calendar;
 
 import android.Manifest.permission;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.FrameLayout;
+import android.widget.Toast;
+import com.getbase.floatingactionbutton.FloatingActionButton;
+import com.getbase.floatingactionbutton.FloatingActionsMenu;
 
 import static android.support.v4.content.FileProvider.getUriForFile;
 
@@ -44,9 +51,12 @@ public class HomePage extends AppCompatActivity {
     RecyclerView list_images;
     RecyclerView.LayoutManager list_manager;
     imageAdapter list_adapter;
+    Toolbar mToolbar;
+    FloatingActionsMenu addMenu;
     databaseManage dbData = new databaseManage(this);
     int undo = 0, permCount = 0, fileno = 0;
-    String today = null;
+    String today = null, filename = null;
+    int index = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,19 +76,41 @@ public class HomePage extends AppCompatActivity {
         else
             fileno = sPrefs.getInt("count", 0);
 
+        today = df.format(Calendar.getInstance().getTime());
+        filename = "IMG-" + today + "-DTC" + String.format("%04d", fileno) + ".jpg";
+
         list_images = (RecyclerView) findViewById(R.id.list);
         list_manager = new LinearLayoutManager(this);
         list_images.setLayoutManager(list_manager);
 
         list_adapter = new imageAdapter(this);
         list_images.setAdapter(list_adapter);
+        list_images.setOnScrollListener(new HidingScrollListener() {
+            @Override
+            public void onHide() {
+                hideViews();
+            }
+
+            @Override
+            public void onShow() {
+                showViews();
+            }
+        });
         list_adapter.notifyDataSetChanged();
+
+        mToolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(mToolbar);
+        setTitle(getString(R.string.app_name));
+        mToolbar.setTitleTextColor(getResources().getColor(android.R.color.white));
 
         FloatingActionButton addGallery = (FloatingActionButton) findViewById(R.id.add_gallery);
         FloatingActionButton addCamera = (FloatingActionButton) findViewById(R.id.add_camera);
+        addMenu = (FloatingActionsMenu) findViewById(R.id.add_menu);
+        addGallery.setSize(FloatingActionButton.SIZE_MINI);
+        addCamera.setSize(FloatingActionButton.SIZE_MINI);
 
         ItemTouchHelper.SimpleCallback simpleItemTouchCallback =
-                new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+                new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT|ItemTouchHelper.RIGHT) {
 
                     @Override
                     public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
@@ -119,6 +151,32 @@ public class HomePage extends AppCompatActivity {
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
         itemTouchHelper.attachToRecyclerView(list_images);
 
+        list_adapter.setOnItemClickListener(new OnItemClickListener() {
+            @Override
+            public void onItemClick(cardItem item) {
+                try {
+                    Intent cropIntent = new Intent("com.android.camera.action.CROP");
+
+                    Uri picUri = item.image;
+                    Log.e("Picture", picUri.toString());
+                    index = listTools.allCards.indexOf(item);
+                    cropIntent.setDataAndType(picUri, "image/*");
+                    cropIntent.putExtra("crop", "true");
+                    cropIntent.putExtra("aspectX", 1);
+                    cropIntent.putExtra("aspectY", 1);
+                    cropIntent.putExtra("outputX", 720);
+                    cropIntent.putExtra("outputY", 1280);
+                    cropIntent.putExtra("return-data", true);
+                    startActivityForResult(cropIntent, 3);
+                }
+                catch (ActivityNotFoundException anfe) {
+                    String errorMessage = "Whoops - your device doesn't support the crop action!";
+                    Snackbar error = Snackbar.make(listTools.coordinatorLayout, errorMessage, Snackbar.LENGTH_LONG);
+                    error.show();
+                }
+            }
+        });
+
         addGallery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -128,11 +186,12 @@ public class HomePage extends AppCompatActivity {
                 if (permCount == 2) {
                     Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
                     startActivityForResult(galleryIntent, 1);
+                    addMenu.collapse();
                 }
             }
         });
 
-        addCamera.setOnClickListener(new View.OnClickListener() {
+         addCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String[] request = new String[]{permission.CAMERA, permission.READ_EXTERNAL_STORAGE, permission.WRITE_EXTERNAL_STORAGE};
@@ -140,7 +199,7 @@ public class HomePage extends AppCompatActivity {
 
                 if (permCount == 3) {
                     Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                    File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoCamera");
+                    File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
                     if (!imagePath.exists()) {
                         if (!imagePath.mkdir()) {
                             System.out.println("***Problem creating Image folder ");
@@ -152,9 +211,14 @@ public class HomePage extends AppCompatActivity {
                     cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
                     cameraIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     startActivityForResult(cameraIntent, 2);
+                    addMenu.collapse();
                 }
             }
         });
+    }
+
+    public interface OnItemClickListener {
+        void onItemClick(cardItem item);
     }
 
     @Override
@@ -162,20 +226,17 @@ public class HomePage extends AppCompatActivity {
 
         if (requestCode == 1 && resultCode == RESULT_OK) {
             Uri imageUri = data.getData();
+            Log.e("Photos", imageUri.toString());
             listTools.getFromGal(this, imageUri);
             list_adapter.notifyDataSetChanged();
         }
         else if (requestCode == 2 && resultCode == RESULT_OK) {
             Uri imageUri;
-            File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoCamera");
+            File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
             File tempImg = new File(imagePath, "temp_image.png");
 
-            SimpleDateFormat df = new SimpleDateFormat("ddMMyyyy");
-            today = df.format(Calendar.getInstance().getTime());
-            String filename = "IMG-" + today + "-DTC" + String.format("%04d", fileno) + ".jpg";
-            fileno++;
-
             File sample = new File(imagePath, filename);
+            fileno++;
 
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
@@ -205,8 +266,44 @@ public class HomePage extends AppCompatActivity {
             listTools.getFromCam(this, imageUri);
             list_adapter.notifyDataSetChanged();
         }
+        else if (requestCode == 3 && resultCode == RESULT_OK) {
+            Uri imageUri;
+            Bitmap cropped = null;
+            if(data != null) {
+                cropped = (Bitmap) data.getExtras().get("data");
+            }
+            File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
+            File sample = new File(imagePath, filename);
+            fileno++;
+
+            try {
+                OutputStream fOutputStream = new FileOutputStream(sample);
+                cropped.compress(Bitmap.CompressFormat.JPEG, 100, fOutputStream);
+                fOutputStream.flush();
+                fOutputStream.close();
+            }catch (FileNotFoundException e){
+                e.printStackTrace();
+                return;
+            }catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+            imageUri = getImageContentUri(this, sample);
+            listTools.allCards.get(index).image = imageUri;
+            list_adapter.notifyDataSetChanged();
+        }
 
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (addMenu.isExpanded()) {
+            addMenu.collapse();
+        }
+        else {
+            super.onBackPressed();
+        }
     }
 
     @Override
@@ -244,7 +341,6 @@ public class HomePage extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, required, permCode);
         }
     }
-
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -286,6 +382,22 @@ public class HomePage extends AppCompatActivity {
                 return null;
             }
         }
+    }
+
+    private void hideViews() {
+        mToolbar.animate().translationY(-mToolbar.getHeight()).setInterpolator(new AccelerateInterpolator(2));
+
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) addMenu.getLayoutParams();
+        int fabBottomMargin = lp.bottomMargin;
+        addMenu.animate().translationY(addMenu.getHeight()+fabBottomMargin).setInterpolator(new AccelerateInterpolator(2)).start();
+    }
+
+    /**
+     * Show toolbar and image button
+     */
+    private void showViews() {
+        mToolbar.animate().translationY(0).setInterpolator(new DecelerateInterpolator(2));
+        addMenu.animate().translationY(0).setInterpolator(new DecelerateInterpolator(2)).start();
     }
 }
 
