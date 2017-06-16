@@ -20,7 +20,7 @@ public class databaseManage {
     private static final String C_CAPTION = "CAPTION";
     private String[] allColumns = {C_ID, C_IMG, C_CAPTION};
 
-    private static final String CREATE_DB = "CREATE TABLE " + TABLE_NAME + "( " + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+    private static final String CREATE_DB = "CREATE TABLE " + TABLE_NAME + "( " + C_ID + " INTEGER PRIMARY KEY, "
             + C_IMG + " TEXT, " + C_CAPTION + " TEXT);";
 
     private dbHelper myHelper;
@@ -61,9 +61,17 @@ public class databaseManage {
 
     public long createEntry (cardItem c) {
         ContentValues cv = new ContentValues();
+        cv.put(C_ID, c.place);
         cv.put(C_IMG, c.image.toString());
         cv.put(C_CAPTION, c.caption);
         return myDatabase.insert(TABLE_NAME, null, cv);
+    }
+
+    public long editEntry (cardItem c, Uri cropped) {
+        ContentValues cv = new ContentValues();
+        cv.put(C_IMG, cropped.toString());
+        cv.put(C_CAPTION, c.caption);
+        return myDatabase.update(TABLE_NAME, cv, C_ID + "=?", new String[]{String.valueOf(c.place)});
     }
 
     public ArrayList<cardItem> getData() {
@@ -72,6 +80,7 @@ public class databaseManage {
         for(c.moveToFirst(); !c.isAfterLast(); c.moveToNext()) {
             cardItem row = convertData(c);
             list.add(row);
+            Log.e("dbCollect", "Recieved " + row.caption + " with id " + row.place + " at " + row.image.toString());
         }
         c.close();
         return list;

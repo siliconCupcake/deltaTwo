@@ -63,7 +63,7 @@ public class imageAdapter extends RecyclerView.Adapter<imageAdapter.cardHolder> 
                     public boolean onException(Exception e, Uri uri, Target<GlideDrawable> target, boolean b) {
                         holder.cError.setVisibility(View.VISIBLE);
                         holder.pBar.setVisibility(View.GONE);
-                        Log.e("Loading", e.toString());
+                        Log.e("Glide error", e.toString());
                         return false;
                     }
 
@@ -99,7 +99,7 @@ public class imageAdapter extends RecyclerView.Adapter<imageAdapter.cardHolder> 
         private TextView cCaption;
         private TextView cPos;
         private ProgressBar pBar;
-        private TextView cError;
+        private ImageView cError;
 
         public cardHolder(View v) {
             super(v);
@@ -107,7 +107,7 @@ public class imageAdapter extends RecyclerView.Adapter<imageAdapter.cardHolder> 
             this.cCaption = (TextView) v.findViewById(R.id.caption);
             this.cPos = (TextView) v.findViewById(R.id.pos);
             this.pBar = (ProgressBar) v.findViewById(R.id.progressBar);
-            this.cError = (TextView) v.findViewById(R.id.error);
+            this.cError = (ImageView) v.findViewById(R.id.error);
         }
     }
 

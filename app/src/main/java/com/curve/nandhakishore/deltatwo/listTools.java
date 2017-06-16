@@ -18,6 +18,7 @@ public class listTools {
 
     public static ArrayList<cardItem> allCards;
     public static CoordinatorLayout coordinatorLayout;
+    public static int ID;
 
     public static void init_cards() {
         allCards = new ArrayList<>();
@@ -44,10 +45,11 @@ public class listTools {
                 EditText cString = (EditText) inflator.findViewById(R.id.dialog_et) ;
                 String text = cString.getText().toString();
                 if (!TextUtils.isEmpty(text)){
-                    cardItem new_item = new cardItem(picture, text, listTools.allCards.size());
+                    cardItem new_item = new cardItem(picture, text, listTools.ID);
                     listTools.allCards.add(new_item);
                     dbData.createEntry(new_item);
-                    Log.e("db", "Added " + text);
+                    Log.e("db", "Added " + new_item.caption + " with id " + new_item.place + " at " + new_item.image.toString());
+                    listTools.ID++;
                     dbData.close();
                 }
                 else {
