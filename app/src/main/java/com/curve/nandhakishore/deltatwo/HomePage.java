@@ -58,7 +58,7 @@ public class HomePage extends AppCompatActivity {
     FloatingActionsMenu addMenu;
     FloatingActionButton addGallery, addCamera;
     databaseManage dbData = new databaseManage(this);
-    int undo = 0, permCount = 0, fileno = 0, index = 0;
+    int undo = 0, fileno = 0, index = 0;
     String today = null, filename = null;
 
     @Override
@@ -173,12 +173,8 @@ public class HomePage extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String[] request = new String[]{permission.READ_EXTERNAL_STORAGE, permission.WRITE_EXTERNAL_STORAGE};
-                reqPermission(request, 1);
-                if (permCount == 2) {
-                    Intent galleryIntent = new Intent(Intent.ACTION_PICK, EXTERNAL_CONTENT_URI);
-                    startActivityForResult(galleryIntent, 1);
-                    addMenu.collapse();
-                }
+                if(reqPermission(request, 1))
+                    callGallery();
             }
         });
 
@@ -186,26 +182,14 @@ public class HomePage extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String[] request = new String[]{permission.CAMERA, permission.READ_EXTERNAL_STORAGE, permission.WRITE_EXTERNAL_STORAGE};
-                reqPermission(request, 1);
-                if (permCount == 3) {
-                    Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                    File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
-                    if (!imagePath.exists()) {
-                        if (!imagePath.mkdir()) {
-                            System.out.println("***Problem creating Image folder ");
-                        }
-                    }
-                    File tempImg = new File(imagePath, "temp_image.png");
-                    Uri photoUri = getUriForFile(getApplicationContext(), "com.curve.nandhakishore.provider", tempImg);
-                    getApplicationContext().grantUriPermission("com.curve.nandhakishore.deltatwo", photoUri, Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-                    cameraIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    startActivityForResult(cameraIntent, 2);
-                    addMenu.collapse();
-                }
+                if(reqPermission(request, 2))
+                    callCamera();
+
             }
         });
     }
+
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -291,23 +275,46 @@ public class HomePage extends AppCompatActivity {
         void onItemClick(cardItem item);
     }
 
-    public void reqPermission(String[] permissions, int permCode) {
+    public Boolean reqPermission(String[] permissions, int permCode) {
         ArrayList<String> temp = new ArrayList<>();
-        permCount = 0;
         for(int i = 0; i < permissions.length; i++) {
             if (ContextCompat.checkSelfPermission(this, permissions[i])
                     != PackageManager.PERMISSION_GRANTED) {
                 temp.add(permissions[i]);
             }
-            else {
-                permCount++;
-            }
         }
         String[] required = new String[temp.size()];
         required = temp.toArray(required);
-        if(required.length != 0) {
-            ActivityCompat.requestPermissions(this, required, permCode);
+        if(required.length == 0){
+            return true;
         }
+        else{
+            ActivityCompat.requestPermissions(this, required, permCode);
+            return false;
+        }
+    }
+
+    private void callGallery() {
+            Intent galleryIntent = new Intent(Intent.ACTION_PICK, EXTERNAL_CONTENT_URI);
+            startActivityForResult(galleryIntent, 1);
+            addMenu.collapse();
+    }
+
+    private  void callCamera() {
+            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
+            if (!imagePath.exists()) {
+                if (!imagePath.mkdir()) {
+                    System.out.println("***Problem creating Image folder ");
+                }
+            }
+            File tempImg = new File(imagePath, "temp_image.png");
+            Uri photoUri = getUriForFile(getApplicationContext(), "com.curve.nandhakishore.provider", tempImg);
+            getApplicationContext().grantUriPermission("com.curve.nandhakishore.deltatwo", photoUri, Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+            cameraIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            startActivityForResult(cameraIntent, 2);
+            addMenu.collapse();
     }
 
     private Bitmap compressImage(File tempImg) {
@@ -338,20 +345,20 @@ public class HomePage extends AppCompatActivity {
     public static Uri getImageContentUri(Context context, File imageFile) {
         String filePath = imageFile.getAbsolutePath();
         Cursor cursor = context.getContentResolver().query(
-                EXTERNAL_CONTENT_URI,
-                new String[] { MediaStore.Images.Media._ID },
-                MediaStore.Images.Media.DATA + "=? ",
+                MediaStore.Files.getContentUri("external"),
+                new String[] { MediaStore.Files.FileColumns._ID },
+                MediaStore.Files.FileColumns.DATA + "=? ",
                 new String[] { filePath }, null);
         if (cursor != null && cursor.moveToFirst()) {
             int id = cursor.getInt(cursor.getColumnIndex(MediaStore.MediaColumns._ID));
             cursor.close();
-            return Uri.withAppendedPath(EXTERNAL_CONTENT_URI, "" + id);
+            return Uri.withAppendedPath(MediaStore.Files.getContentUri("external"), "" + id);
         } else {
             if (imageFile.exists()) {
                 ContentValues values = new ContentValues();
-                values.put(MediaStore.Images.Media.DATA, filePath);
+                values.put(MediaStore.Files.FileColumns.DATA, filePath);
                 return context.getContentResolver().insert(
-                        EXTERNAL_CONTENT_URI, values);
+                        MediaStore.Files.getContentUri("external"), values);
             } else {
                 return null;
             }
@@ -381,19 +388,25 @@ public class HomePage extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (grantResults.length > 0) {
+            for(int i = 0; i < permissions.length; i++) {
+                if(grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(getApplicationContext(), "Please grant all permissions", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+        }
         switch (requestCode) {
             case 1 : {
-                if (grantResults.length > 0) {
-                    for(int i = 0; i < permissions.length; i++) {
-                        if(grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                            permCount++;
-                        }
-                    }
-                }
+                callCamera();
                 return;
             }
-
+            case 2 : {
+                callGallery();
+                return;
+            }
             default: super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
         }
     }
 
