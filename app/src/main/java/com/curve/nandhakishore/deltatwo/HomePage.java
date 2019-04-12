@@ -156,41 +156,11 @@ public class HomePage extends AppCompatActivity {
         list_adapter.setOnItemClickListener(new OnItemClickListener() {
             @Override
             public void onItemClick(cardItem item) {
-                try {
-                    Intent cropIntent = new Intent("com.android.camera.action.CROP");
-
-                    Uri sourceUri = item.image;
-                    index = listTools.allCards.indexOf(item);
-                    File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
-                    if (!imagePath.exists()) {
-                        if (!imagePath.mkdir()) {
-                            System.out.println("***Problem creating Image folder ");
-                        }
-                    }
-                    filename = "IMG-" + today + "-DT" + String.format("%04d", fileno) + ".jpg";
-                    File tempImg = new File(imagePath, filename);
-                    Log.e("FilePath", "Crop target to " + tempImg.getAbsolutePath());
-                    Uri targetUri = getUriForFile(getApplicationContext(), "com.curve.nandhakishore.provider", tempImg);
-                    registeredApps(targetUri, new Intent(Intent.ACTION_PICK, EXTERNAL_CONTENT_URI));
-                    cropIntent.putExtra(MediaStore.EXTRA_OUTPUT, targetUri);
-                    cropIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    cropIntent.setDataAndType(sourceUri, "image/*");
-                    cropIntent.putExtra("crop", "true");
-                    cropIntent.putExtra("aspectX", 1);
-                    cropIntent.putExtra("aspectY", 1);
-                    cropIntent.putExtra("outputX", 400);
-                    cropIntent.putExtra("outputY", 400);
-                    cropIntent.putExtra("scale", true);
-                    cropIntent.putExtra("scaleUpIfNeeded", true);
-                    cropIntent.putExtra("return-data", true);
-                    Log.e("Send to crop", item.caption + " with id " + item.place + " at " + item.image.toString());
-                    startActivityForResult(cropIntent, 3);
-                }
-                catch (ActivityNotFoundException anfe) {
-                    String errorMessage = "Whoops - your device doesn't support the crop action!";
-                    Snackbar error = Snackbar.make(listTools.coordinatorLayout, errorMessage, Snackbar.LENGTH_LONG);
-                    error.show();
-                }
+                Uri source = item.image;
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_VIEW);
+                intent.setDataAndType(source, "image/*");
+                startActivity(intent);
             }
         });
 
@@ -220,8 +190,17 @@ public class HomePage extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         if (requestCode == 1 && resultCode == RESULT_OK) {
-            Uri imageUri = data.getData();
-            listTools.getFromGal(this, imageUri);
+            Uri videoUri;
+            File videoPath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
+            File tempVid = new File(videoPath, "temp_video.mp4");
+            filename = "VID-" + today + "-DT" + String.format("%04d", fileno) + ".mp4";
+            File sample = new File(videoPath, filename);
+            fileno++;
+            if (!tempVid.renameTo(sample)){
+                Log.e("logMarker", "Failed to rename " + tempVid);
+            }
+            videoUri = getImageContentUri(this, sample);
+            listTools.getFromCam(this, videoUri);
             list_adapter.notifyDataSetChanged();
         }
         else if (requestCode == 2 && resultCode == RESULT_OK) {
@@ -240,20 +219,6 @@ public class HomePage extends AppCompatActivity {
             }
             Log.e("FilePath", "Camera to " + sample.getAbsolutePath());
             listTools.getFromCam(this, imageUri);
-            list_adapter.notifyDataSetChanged();
-        }
-        else if (requestCode == 3 && resultCode == RESULT_OK) {
-            Uri imageUri;
-            File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
-            filename = "IMG-" + today + "-DT" + String.format("%04d", fileno) + ".jpg";
-            File sample = new File(imagePath, filename);
-            Log.e("FilePath", "Cropped to " + sample.getAbsolutePath());
-            fileno++;
-
-            imageUri = getImageContentUri(this, sample);
-            listTools.allCards.get(index).image = imageUri;
-            dbData.editEntry(listTools.allCards.get(index), imageUri);
-            Log.e("db", "Cropped " + listTools.allCards.get(index).caption + " with id " + listTools.allCards.get(index).place);
             list_adapter.notifyDataSetChanged();
         }
 
@@ -320,9 +285,21 @@ public class HomePage extends AppCompatActivity {
     }
 
     private void callGallery() {
-            Intent galleryIntent = new Intent(Intent.ACTION_PICK, EXTERNAL_CONTENT_URI);
-            startActivityForResult(galleryIntent, 1);
-            addMenu.collapse();
+        Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        File imagePath = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DeltaTwoImages");
+        if (!imagePath.exists()) {
+            if (!imagePath.mkdir()) {
+                System.out.println("***Problem creating Image folder ");
+            }
+        }
+        File tempVid = new File(imagePath, "temp_video.mp4");
+        Uri videoUri = getUriForFile(getApplicationContext(), "com.curve.nandhakishore.provider", tempVid);
+        getApplicationContext().grantUriPermission("com.curve.nandhakishore.deltatwo", videoUri, Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        videoIntent.putExtra(MediaStore.EXTRA_OUTPUT, videoUri);
+        videoIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION + Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        startActivityForResult(videoIntent, 1);
+        addMenu.collapse();
+
     }
 
     private  void callCamera() {

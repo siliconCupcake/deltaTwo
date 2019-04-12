@@ -61,7 +61,7 @@
                 app:fab_colorNormal="#43A047"
                 app:fab_colorPressed="#2E7D32"
                 fab:fabSize="mini"
-                app:fab_icon="@drawable/ic_gallery_add" />
+                app:fab_icon="@drawable/baseline_video_call_white_48" />
 
             <com.getbase.floatingactionbutton.FloatingActionButton
                 android:id="@+id/add_camera"
