@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.CoordinatorLayout;
@@ -25,8 +26,8 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.View;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -36,14 +37,18 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-
 import android.Manifest.permission;
 import android.view.animation.AccelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 import com.getbase.floatingactionbutton.FloatingActionButton;
 import com.getbase.floatingactionbutton.FloatingActionsMenu;
+import jp.wasabeef.blurry.Blurry;
 
 import static android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
 import static android.support.v4.content.FileProvider.getUriForFile;
@@ -127,6 +132,26 @@ public class HomePage extends AppCompatActivity {
 
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleItemTouchCallback);
         itemTouchHelper.attachToRecyclerView(list_images);
+
+        final ImageView fade = (ImageView) findViewById(R.id.blur);
+        final Animation myFadeInAnimation = AnimationUtils.loadAnimation(this, R.anim.fadein);
+        final Animation myFadeOutAnimation = AnimationUtils.loadAnimation(this, R.anim.fadeout);
+        fade.setVisibility(View.GONE);
+
+
+        addMenu.setOnFloatingActionsMenuUpdateListener(new FloatingActionsMenu.OnFloatingActionsMenuUpdateListener() {
+            @Override
+            public void onMenuExpanded() {
+                fade.setVisibility(View.VISIBLE);
+                fade.startAnimation(myFadeInAnimation);
+            }
+
+            @Override
+            public void onMenuCollapsed() {
+                fade.startAnimation(myFadeOutAnimation);
+                fade.setVisibility(View.GONE);
+            }
+        });
 
         list_adapter.setOnItemClickListener(new OnItemClickListener() {
             @Override
@@ -397,11 +422,11 @@ public class HomePage extends AppCompatActivity {
             }
         }
         switch (requestCode) {
-            case 1 : {
+            case 2 : {
                 callCamera();
                 return;
             }
-            case 2 : {
+            case 1 : {
                 callGallery();
                 return;
             }
@@ -437,5 +462,3 @@ public class HomePage extends AppCompatActivity {
         super.onDestroy();
     }
 }
-
-
